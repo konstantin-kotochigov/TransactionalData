@@ -71,21 +71,27 @@ df = df.drop(columns=["start_date"])
 output = output_file_dir + output_file_name
 if output_format == "csv":
     df.to_csv(output+".csv", sep=";")
+
 if output_format == "parquet":
     df.to_parquet(output+".parquet")
+
 if output_format == "pickle":
     df.to_csv("result.csv", sep=";")
 
-transaction_params = """{
-    'trn_type':{'distribution':'discrete', 'parameters':{'names':['view','click','buy'], 'p':[80,15,5]}},
-    'campaign':{'distribution':'discrete', 'parameters':{'names':['campaign1','campaign2','campaign3','campaign4','campaign5'], 'p':[35,25,20,10,10]}},
-    'trn_amt': {'distribution':'lognormal', 'parameters':(6,1)},
-    'product': {'distribution':'discrete','parameters':{'names':['product1','product2','product3','product4','product5'], 'p':[30,20,20,15,15]}}
-}"""
+df = pandas.read_csv(output+".csv", sep=";")
 
-transaction_params = '''{
-    "trn_type":{"distribution":"discrete", "parameters":{"names":["view","click","buy"], "p":[80,15,5]}},
-    "campaign":{"distribution":"discrete", "parameters":{"names":["campaign1","campaign2","campaign3","campaign4","campaign5"], "p":[35,25,20,10,10]}},
-    "trn_amt": {"distribution":"lognormal", "parameters":[6,1]},
-    "product": {"distribution":"discrete","parameters":{"names":["product1","product2","product3","product4","product5"], "p":[30,20,20,15,15]}}
-}'''
+df['view'] = numpy.where(df.trn_type=="view",1,0)
+df['click'] = numpy.where(df.trn_type=="click",1,0)
+df['buy'] = numpy.where(df.trn_type=="buy",1,0)
+
+df = df.groupby("cust_id", as_index=False).agg({"view":"sum","click":"sum","buy":["sum","count"]})
+df.columns = [' '.join(col).strip() for col in df.columns.values]
+df['buy_ctr'] = df['buy sum'] / df['buy count']
+df['click_ctr'] = df['click sum'] / df['buy count']
+
+import matplotlib.pyplot as plt
+# plt.scatter(df['view count'], df['buy_ctr'])
+plt.scatter(df['view count'], df['click_ctr']) 
+plt.xlim([0,100])
+plt.legend()
+plt.show()
